@@ -77,11 +77,26 @@
 #include "ns3/dsr-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/yans-wifi-helper.h"
+#include "ns3/core-module.h"
+#include "ns3/opengym-module.h"
+#include <cstdio>
+
 
 using namespace ns3;
 using namespace dsr;
+using namespace std;
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
+
+uint32_t global_PacketsReceived;
+float distance_global= 1000.0; 
+float initialXC1 =0.0;
+float initialYC1 =0.0;
+float initialXC2 =200.0;
+float initialYC2 =500.0;
+float initialXC3 =200.0;
+float initialYC3 =1000.0;
+
 
 class RoutingExperiment
 {
@@ -91,11 +106,14 @@ public:
   //static void SetMACParam (ns3::NetDeviceContainer & devices,
   //                                 int slotDistance);
   std::string CommandSetup (int argc, char **argv);
+  //uint32_t getPackets() const { return packetsReceived; }
+
 
 private:
   Ptr<Socket> SetupPacketReceive (Ipv4Address addr, Ptr<Node> node);
   void ReceivePacket (Ptr<Socket> socket);
   void CheckThroughput ();
+  
 
   uint32_t port;
   uint32_t bytesTotal;
@@ -109,11 +127,158 @@ private:
   uint32_t m_protocol;
 };
 
+Ptr<OpenGymSpace> MyGetObservationSpace(void)
+{
+  uint32_t nodeNum = 3;
+  float low = 0.0;
+  float high = 100.0;
+  std::vector<uint32_t> shape = {nodeNum,};
+  std::string dtype = TypeNameGet<uint32_t> ();
+  Ptr<OpenGymBoxSpace> space = CreateObject<OpenGymBoxSpace> (low, high, shape, dtype);
+  NS_LOG_UNCOND ("MyGetObservationSpace: " << space);
+  return space;
+}
+
+
+
+
+Ptr<OpenGymSpace> MyGetActionSpace(void)
+{
+  uint32_t nodeNum = 3;
+
+  Ptr<OpenGymDiscreteSpace> space = CreateObject<OpenGymDiscreteSpace> (nodeNum);
+  NS_LOG_UNCOND ("MyGetActionSpace: " << space);
+  return space;
+}
+
+
+bool MyGetGameOver(void)
+{
+
+  bool isGameOver = false;
+  static float stepCounter = 0.0;
+  stepCounter += 1;
+  if (stepCounter == 10) {
+      isGameOver = true;
+  }
+  NS_LOG_UNCOND ("MyGetGameOver: " << isGameOver);
+  return isGameOver;
+}
+
+
+Ptr<OpenGymDataContainer> MyGetObservation(void)
+{
+  //Define the base observation space
+  uint32_t nodeNum = 3;
+
+  std::vector<uint32_t> shape = {nodeNum,};
+  Ptr<OpenGymBoxContainer<uint32_t> > box = CreateObject<OpenGymBoxContainer<uint32_t> >(shape);
+  //uint32_t nodeNum2 = NodeList::GetNNodes ();
+    for (uint32_t i=0; i<nodeNum; i++)
+    {
+      Ptr<Node> node = NodeList::GetNode(i);
+
+        //Extract the position from the hierarchy 2 nodes
+      Ptr<MobilityModel> cpMob = node->GetObject<MobilityModel>();
+      Vector m_position = cpMob->GetPosition();
+      box->AddValue(m_position.x);
+      
+    }
+  NS_LOG_UNCOND ("MyGetObservation: " << box);
+  return box;
+}
+
+
+float 
+MyGetReward(void)
+{
+  return global_PacketsReceived;
+}
+
+string convertToString(char* a, int size)
+{
+    int i;
+    string s = "";
+    for (i = 0; i < size; i++) {
+        s = s + a[i];
+    }
+    return s;
+}
+
+bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
+{
+  NS_LOG_UNCOND ("MyExecuteActions: " << action);
+  
+  // Get and format actions
+  Ptr<OpenGymBoxContainer<uint32_t> > box = DynamicCast<OpenGymBoxContainer<uint32_t> >(action);
+  std::vector<uint32_t> actionVector = box->GetData();
+
+  uint32_t nodeNum = NodeList::GetNNodes ();
+  //Iterate over nodes and check if the nodes are the ones of the second hierarchy
+
+  float initialX , initialY;
+  for (uint32_t i=0; i<nodeNum; i++)
+  {
+       Ptr<Node> node = NodeList::GetNode(i);
+      //Set location of the nodes of the second hierarchy
+      Ptr<MobilityHelper> cpMob = node->GetObject<MobilityHelper>();
+      if (i==1){
+        initialX = initialXC1;
+        initialY = initialYC1;
+      }
+      if (i==2){
+        initialX = initialXC2;
+        initialY = initialYC2;
+      }
+      if (i==1){
+        initialX = initialXC2;
+        initialY = initialYC3;
+      }
+      distance_global-=100.0;
+      ObjectFactory pos;
+      pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+        char distanceX[50]={''};
+        char distanceY[50]={''};
+
+        int age = 23;
+
+        // print "My age is " and age variable to buffer variable
+        sprintf(buffer, "My age is %d", age);
+
+      sprintf(distanceX, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialX+distance_global,initialX+100.0+distance_global);
+      sprintf(distanceY, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialY+distance_global,initialY+500.0+distance_global);
+      pos.Set ("X", StringValue (convertToString(distanceX)));
+      pos.Set ("Y", StringValue (convertToString(distanceY)));
+
+      Ptr<PositionAllocator> taPositionAlloc= pos.Create ()->GetObject<PositionAllocator> ();
+
+      cpMob.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
+                                      "Speed", StringValue (ssSpeed.str ()),
+                                      "Pause", StringValue (ssPause.str ()),
+                                      "PositionAllocator", PointerValue (taPositionAlloc));
+      cpMob.SetPositionAllocator (taPositionAlloc);
+
+      
+    
+  }
+
+  return true;
+}
+
+
+
+void ScheduleNextStateRead(double envStepTime, Ptr<OpenGymInterface> openGym)
+{
+  Simulator::Schedule (Seconds(envStepTime), &ScheduleNextStateRead, envStepTime, openGym);
+  openGym->NotifyCurrentState();
+}
+
+
 RoutingExperiment::RoutingExperiment ()
   : port (9),
     bytesTotal (0),
     packetsReceived (0),
-    m_CSVfileName ("manet-routing.output.csv"),
+    m_CSVfileName ("manet-simulation.output.csv"),
     m_traceMobility (false),
     m_protocol (2) // AODV
 {
@@ -130,11 +295,14 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
     {
       InetSocketAddress addr = InetSocketAddress::ConvertFrom (senderAddress);
       oss << " received one packet from " << addr.GetIpv4 ();
+      //std::cout<<"RECIBI UN PAQUETe"<<std::endl;
     }
   else
     {
       oss << " received one packet!";
     }
+
+  
   return oss.str ();
 }
 
@@ -147,6 +315,7 @@ RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
     {
       bytesTotal += packet->GetSize ();
       packetsReceived += 1;
+      global_PacketsReceived+=1;
       NS_LOG_UNCOND (PrintReceivedPacket (socket, packet, senderAddress));
     }
 }
@@ -216,6 +385,12 @@ main (int argc, char *argv[])
   double txp = 7.5;
 
   experiment.Run (nSinks, txp, CSVfileName);
+
+  
+
+
+
+
 }
 
 void
@@ -227,7 +402,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   m_CSVfileName = CSVfileName;
 
 
-  //double distance = 10;  // m
+  // m
   //uint32_t packetSize = 1000; // bytes
   //uint32_t numPackets = 100;
   uint32_t n = 10;  // by default, 5x2
@@ -311,12 +486,14 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   int64_t streamIndex1 = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos1;
+  
   pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=100.0]"));
   pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=500.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
   streamIndex1 += taPositionAlloc1->AssignStreams (streamIndex1);
+
 
     mobilityCluster1.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
                                   "Speed", StringValue (ssSpeed.str ()),
@@ -334,9 +511,11 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   int64_t streamIndex2 = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos2;
+  char distanceY2[50]={''};
   pos2.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+  sprintf(distanceY2, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 500+distance_global,1000+distance_global);
   pos2.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=101.0|Max=200.0]"));
-  pos2.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=501.0|Max=1000.0]"));
+  pos2.Set ("Y", StringValue (convertToString(distanceY2)));
 
   Ptr<PositionAllocator> taPositionAlloc2 = pos2.Create ()->GetObject<PositionAllocator> ();
   streamIndex2 += taPositionAlloc2->AssignStreams (streamIndex2);
@@ -358,8 +537,11 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   ObjectFactory pos3;
   pos3.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+  
+  sprintf(buffer, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 1000+distance_global,1500+distance_global);
+  char distanceY3[50]={''} 
   pos3.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=201.0|Max=300.0]"));
-  pos3.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=1001.0|Max=1500.0]"));
+  pos3.Set ("Y", StringValue (convertToString(distanceY3)));
 
   Ptr<PositionAllocator> taPositionAlloc3 = pos3.Create ()->GetObject<PositionAllocator> ();
   streamIndex3 += taPositionAlloc3->AssignStreams (streamIndex3);
@@ -437,18 +619,19 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
 
 
-  for (int i = 0; i < 3; i++)
-    {
-      Ptr<Socket> sink = SetupPacketReceive (interfaceList[i].GetAddress(0), listClusters[i].Get (0));
+  Ptr<Socket> sink = SetupPacketReceive (interface1.GetAddress(0), Cluster1.Get (0));
 
-      AddressValue remoteAddress (InetSocketAddress (interfaceList[i+1].GetAddress (0), port));
-      onoff1.SetAttribute ("Remote", remoteAddress);
+  AddressValue remoteAddress (InetSocketAddress (interface1.GetAddress (0), port));
+  onoff1.SetAttribute ("Remote", remoteAddress);
 
-      Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
-      ApplicationContainer temp = onoff1.Install (listClusters[i].Get (3));
-      temp.Start (Seconds (var->GetValue (100.0,101.0)));
-      temp.Stop (Seconds (TotalTime));
-    }
+
+  ApplicationContainer temp = onoff1.Install (Cluster3.Get (0));
+  
+
+  
+  //temp.Start (Seconds (var->GetValue (100.0,101.0)));
+  //temp.Stop (Seconds (TotalTime));
+  
 
   std::stringstream ss;
   ss << nWifis;
@@ -478,6 +661,17 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   //Ptr<FlowMonitor> flowmon;
   //FlowMonitorHelper flowmonHelper;
   //flowmon = flowmonHelper.InstallAll ();
+  double envStepTime = 0.1; //seconds, ns3gym env step time interval
+  uint32_t openGymPort = 5555;
+  Ptr<OpenGymInterface> openGym = CreateObject<OpenGymInterface> (openGymPort);
+  openGym->SetGetActionSpaceCb( MakeCallback (&MyGetActionSpace) );
+  openGym->SetGetObservationSpaceCb( MakeCallback (&MyGetObservationSpace) );
+  openGym->SetGetGameOverCb( MakeCallback (&MyGetGameOver) );
+  openGym->SetGetObservationCb( MakeCallback (&MyGetObservation) );
+  
+  openGym->SetGetRewardCb( MakeCallback (&MyGetReward) );
+  openGym->SetExecuteActionsCb( MakeCallback (&MyExecuteActions) );
+  Simulator::Schedule (Seconds(0.0), &ScheduleNextStateRead, envStepTime, openGym);
 
 
   NS_LOG_INFO ("Run Simulation.");
@@ -488,6 +682,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   Simulator::Run ();
 
   //flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
+  
 
   Simulator::Destroy ();
 }
