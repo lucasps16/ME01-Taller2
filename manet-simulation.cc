@@ -90,6 +90,7 @@ NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
 uint32_t global_PacketsReceived;
 float distance_global= 1000.0; 
+float distance_change= 0; 
 float initialXC1 =0.0;
 float initialYC1 =0.0;
 float initialXC2 =200.0;
@@ -216,44 +217,16 @@ bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
   
   uint32_t nodeNum = NodeList::GetNNodes ();
   //Iterate over nodes and check if the nodes are the ones of the second hierarchy
-
-  float initialX , initialY;
+  distance_change+=100;
   for (uint32_t i=0; i<nodeNum; i++)
   {
       Ptr<Node> node = NodeList::GetNode(i);
       //Set location of the nodes of the second hierarchy
-      Ptr<MobilityHelper> cpMob = node->GetObject<MobilityHelper>();
-      if (i==1){
-        initialX = initialXC1;
-        initialY = initialYC1;
-      }
-      if (i==2){
-        initialX = initialXC2;
-        initialY = initialYC2;
-      }
-      if (i==1){
-        initialX = initialXC2;
-        initialY = initialYC3;
-      }
-      distance_global-=100.0;
-      ObjectFactory pos;
-      pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-      char distanceX[700]={'\0'};
-      char distanceY[700]={'\0'};
-
-      sprintf(distanceX, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialX+distance_global,initialX+100.0+distance_global);
-      sprintf(distanceY, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialY+distance_global,initialY+500.0+distance_global);
-      pos.Set ("X", StringValue (convertToString(distanceX,700)));
-      pos.Set ("Y", StringValue (convertToString(distanceY,700)));
-
-      Ptr<PositionAllocator> taPositionAlloc= pos.Create ()->GetObject<PositionAllocator> ();
-
-      cpMob.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                      "Speed", StringValue (ssSpeed.str ()),
-                                      "Pause", StringValue (ssPause.str ()),
-                                      "PositionAllocator", PointerValue (taPositionAlloc));
-      cpMob.SetPositionAllocator (taPositionAlloc);
-
+      Ptr<MobilityModel> cpMob = node->GetObject<MobilityModel>();
+    
+      Vector m_position = cpMob->GetPosition();
+      m_position.y = m_position.x-distance_change;
+      cpMob->SetPosition(m_position);
       
     
   }
