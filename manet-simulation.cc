@@ -213,13 +213,14 @@ bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
   Ptr<OpenGymBoxContainer<uint32_t> > box = DynamicCast<OpenGymBoxContainer<uint32_t> >(action);
   std::vector<uint32_t> actionVector = box->GetData();
 
+  
   uint32_t nodeNum = NodeList::GetNNodes ();
   //Iterate over nodes and check if the nodes are the ones of the second hierarchy
 
   float initialX , initialY;
   for (uint32_t i=0; i<nodeNum; i++)
   {
-       Ptr<Node> node = NodeList::GetNode(i);
+      Ptr<Node> node = NodeList::GetNode(i);
       //Set location of the nodes of the second hierarchy
       Ptr<MobilityHelper> cpMob = node->GetObject<MobilityHelper>();
       if (i==1){
@@ -237,18 +238,13 @@ bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
       distance_global-=100.0;
       ObjectFactory pos;
       pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-        char distanceX[50]={''};
-        char distanceY[50]={''};
-
-        int age = 23;
-
-        // print "My age is " and age variable to buffer variable
-        sprintf(buffer, "My age is %d", age);
+      char distanceX[700]={'\0'};
+      char distanceY[700]={'\0'};
 
       sprintf(distanceX, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialX+distance_global,initialX+100.0+distance_global);
       sprintf(distanceY, "ns3::UniformRandomVariable[Min=%f|Max=%f]", initialY+distance_global,initialY+500.0+distance_global);
-      pos.Set ("X", StringValue (convertToString(distanceX)));
-      pos.Set ("Y", StringValue (convertToString(distanceY)));
+      pos.Set ("X", StringValue (convertToString(distanceX,700)));
+      pos.Set ("Y", StringValue (convertToString(distanceY,700)));
 
       Ptr<PositionAllocator> taPositionAlloc= pos.Create ()->GetObject<PositionAllocator> ();
 
@@ -511,16 +507,16 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   int64_t streamIndex2 = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos2;
-  char distanceY2[50]={''};
+  char distanceY2[700]={'\0'};
   pos2.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   sprintf(distanceY2, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 500+distance_global,1000+distance_global);
   pos2.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=101.0|Max=200.0]"));
-  pos2.Set ("Y", StringValue (convertToString(distanceY2)));
+  pos2.Set ("Y", StringValue (convertToString(distanceY2,700)));
 
   Ptr<PositionAllocator> taPositionAlloc2 = pos2.Create ()->GetObject<PositionAllocator> ();
   streamIndex2 += taPositionAlloc2->AssignStreams (streamIndex2);
 
-    mobilityCluster2.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
+  mobilityCluster2.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
                                   "Speed", StringValue (ssSpeed.str ()),
                                   "Pause", StringValue (ssPause.str ()),
                                   "PositionAllocator", PointerValue (taPositionAlloc2));
@@ -538,10 +534,11 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   ObjectFactory pos3;
   pos3.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   
-  sprintf(buffer, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 1000+distance_global,1500+distance_global);
-  char distanceY3[50]={''} 
+  
+  char distanceY3[700]={'\0'}; 
+  sprintf(distanceY3, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 1000+distance_global,1500+distance_global);
   pos3.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=201.0|Max=300.0]"));
-  pos3.Set ("Y", StringValue (convertToString(distanceY3)));
+  pos3.Set ("Y", StringValue (convertToString(distanceY3,700)));
 
   Ptr<PositionAllocator> taPositionAlloc3 = pos3.Create ()->GetObject<PositionAllocator> ();
   streamIndex3 += taPositionAlloc3->AssignStreams (streamIndex3);
@@ -615,8 +612,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   OnOffHelper onoff1 ("ns3::UdpSocketFactory",Address ());
   onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
   onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
-
-
 
 
   Ptr<Socket> sink = SetupPacketReceive (interface1.GetAddress(0), Cluster1.Get (0));
