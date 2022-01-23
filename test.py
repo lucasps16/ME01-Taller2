@@ -3,6 +3,8 @@
 
 import argparse
 from ns3gym import ns3env
+import numpy as np
+import matplotlib.pyplot as plt
 
 __author__ = "Piotr Gawlowicz"
 __copyright__ = "Copyright (c) 2018, Technische Universität Berlin"
@@ -44,6 +46,8 @@ print("Action space: ", ac_space, ac_space.dtype)
 stepIdx = 0
 currIt = 0
 
+rewards=[]
+
 try:
     while True:
         print("Start iteration: ", currIt)
@@ -53,6 +57,7 @@ try:
 
         while True:
             stepIdx += 1
+
             action = env.action_space.sample()
             print("---action: ", action)
 
@@ -60,8 +65,10 @@ try:
             obs, reward, done, info = env.step(action)
             print("---obs, reward, done, info: ", obs, reward, done, info)
 
+            rewards.append(reward)
+
             if done:
-                stepIdx = 0
+                #stepIdx = 0
                 if currIt + 1 < iterationNum:
                     env.reset()
                 break
@@ -70,8 +77,24 @@ try:
         if currIt == iterationNum:
             break
 
+
+
 except KeyboardInterrupt:
     print("Ctrl-C -> Exit")
 finally:
     env.close()
+
+    # Plot results
+ 
+    size = stepIdx
+    #chunks = list(chunk_list(rewards, size))
+    rewards = np.array(rewards)
+    chunks = np.array_split(rewards, size)
+    #chunks = chunks_func(rewards, size)
+    averages = [sum(chunk) / len(chunk) for chunk in chunks]
+
+    plt.plot(averages)
+    plt.xlabel('Episode')
+    plt.ylabel('Average Reward')
+    plt.show()
     print("Done")

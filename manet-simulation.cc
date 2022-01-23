@@ -89,8 +89,9 @@ using namespace std;
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
 uint32_t global_PacketsReceived;
+uint32_t global_PacketsSent;
 float distance_global= 1000.0; 
-float distance_change= 0; 
+float distance_change= 50; 
 float initialXC1 =0.0;
 float initialYC1 =0.0;
 float initialXC2 =200.0;
@@ -159,7 +160,7 @@ bool MyGetGameOver(void)
   bool isGameOver = false;
   static float stepCounter = 0.0;
   stepCounter += 1;
-  if (stepCounter == 10) {
+  if (stepCounter == 200) {
       isGameOver = true;
   }
   NS_LOG_UNCOND ("MyGetGameOver: " << isGameOver);
@@ -193,42 +194,45 @@ Ptr<OpenGymDataContainer> MyGetObservation(void)
 float 
 MyGetReward(void)
 {
-  return global_PacketsReceived;
+  return  (global_PacketsReceived/global_PacketsSent) * 100;
 }
 
-string convertToString(char* a, int size)
-{
-    int i;
-    string s = "";
-    for (i = 0; i < size; i++) {
-        s = s + a[i];
-    }
-    return s;
-}
+
 
 bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
 {
   NS_LOG_UNCOND ("MyExecuteActions: " << action);
-  
-  // Get and format actions
-  Ptr<OpenGymBoxContainer<uint32_t> > box = DynamicCast<OpenGymBoxContainer<uint32_t> >(action);
-  std::vector<uint32_t> actionVector = box->GetData();
-
-  
-  uint32_t nodeNum = NodeList::GetNNodes ();
+  //uint32_t nodeNum = NodeList::GetNNodes ();
   //Iterate over nodes and check if the nodes are the ones of the second hierarchy
-  distance_change+=100;
-  for (uint32_t i=0; i<nodeNum; i++)
+
+  float centerX= 700.0;
+  float centerY= 700.0;
+  for (uint32_t i=0; i<33; i++)
   {
-      Ptr<Node> node = NodeList::GetNode(i);
-      //Set location of the nodes of the second hierarchy
-      Ptr<MobilityModel> cpMob = node->GetObject<MobilityModel>();
-    
-      Vector m_position = cpMob->GetPosition();
-      m_position.y = m_position.x-distance_change;
-      cpMob->SetPosition(m_position);
+    Ptr<Node> node = NodeList::GetNode(i);
+       
+        //std::cout<<"AAHHHHHHHHHHHHHH "<<i<<std::endl;
+        //Set location of the nodes of the second hierarchy
+        Ptr<MobilityModel> cpMob = node->GetObject<MobilityModel>();
       
-    
+        Vector m_position = cpMob->GetPosition();
+        if (m_position.x < centerX){
+            m_position.x+=distance_change;
+        }
+        else{
+          m_position.x-=distance_change;
+        }
+
+        if (m_position.y < centerY){
+            m_position.y+=distance_change;
+        }
+        else{
+          m_position.y-=distance_change;
+        }
+         
+        cpMob->SetPosition(m_position);
+       
+ 
   }
 
   return true;
@@ -313,6 +317,7 @@ RoutingExperiment::CheckThroughput ()
 Ptr<Socket>
 RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
 {
+  global_PacketsSent++;
   TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
   Ptr<Socket> sink = Socket::CreateSocket (node, tid);
   InetSocketAddress local = InetSocketAddress (addr, port);
@@ -480,11 +485,9 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   int64_t streamIndex2 = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos2;
-  char distanceY2[700]={'\0'};
   pos2.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  sprintf(distanceY2, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 500+distance_global,1000+distance_global);
   pos2.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=101.0|Max=200.0]"));
-  pos2.Set ("Y", StringValue (convertToString(distanceY2,700)));
+  pos2.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=501.0|Max=1000.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc2 = pos2.Create ()->GetObject<PositionAllocator> ();
   streamIndex2 += taPositionAlloc2->AssignStreams (streamIndex2);
@@ -506,12 +509,8 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   ObjectFactory pos3;
   pos3.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  
-  
-  char distanceY3[700]={'\0'}; 
-  sprintf(distanceY3, "ns3::UniformRandomVariable[Min=%f|Max=%f]", 1000+distance_global,1500+distance_global);
   pos3.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=201.0|Max=300.0]"));
-  pos3.Set ("Y", StringValue (convertToString(distanceY3,700)));
+  pos3.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=1001.0|Max=1500.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc3 = pos3.Create ()->GetObject<PositionAllocator> ();
   streamIndex3 += taPositionAlloc3->AssignStreams (streamIndex3);
