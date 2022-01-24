@@ -90,14 +90,7 @@ NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
 uint32_t global_PacketsReceived;
 uint32_t global_PacketsSent;
-float distance_global= 1000.0; 
-float distance_change= 50; 
-float initialXC1 =0.0;
-float initialYC1 =0.0;
-float initialXC2 =200.0;
-float initialYC2 =500.0;
-float initialXC3 =200.0;
-float initialYC3 =1000.0;
+float distance_change = 1.5; 
 
 
 class RoutingExperiment
@@ -160,7 +153,8 @@ bool MyGetGameOver(void)
   bool isGameOver = false;
   static float stepCounter = 0.0;
   stepCounter += 1;
-  if (stepCounter == 200) {
+  global_PacketsSent = stepCounter*4;
+  if (stepCounter == 60) {
       isGameOver = true;
   }
   NS_LOG_UNCOND ("MyGetGameOver: " << isGameOver);
@@ -194,7 +188,11 @@ Ptr<OpenGymDataContainer> MyGetObservation(void)
 float 
 MyGetReward(void)
 {
-  return  (global_PacketsReceived/global_PacketsSent) * 100;
+  //printf("Packet sent: %d \n", global_PacketsSent) ;
+  printf("Packet received: %d \n", global_PacketsReceived);
+  printf("Sent: %f\n",(float) global_PacketsReceived/(float) global_PacketsSent*100);
+  //printf("Simualtor time: %f\n",Simulator::Now().GetSeconds());
+  return  ((float) global_PacketsReceived/(float) global_PacketsSent)*1000;
 }
 
 
@@ -204,9 +202,10 @@ bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
   NS_LOG_UNCOND ("MyExecuteActions: " << action);
   //uint32_t nodeNum = NodeList::GetNNodes ();
   //Iterate over nodes and check if the nodes are the ones of the second hierarchy
-
-  float centerX= 700.0;
-  float centerY= 700.0;
+  int max = 300;
+  int min = 0;
+  float centerX= rand()%(max-min+1)+min;
+  float centerY= rand()%(max-min+1)+min;
   for (uint32_t i=0; i<33; i++)
   {
     Ptr<Node> node = NodeList::GetNode(i);
@@ -268,7 +267,6 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
     {
       InetSocketAddress addr = InetSocketAddress::ConvertFrom (senderAddress);
       oss << " received one packet from " << addr.GetIpv4 ();
-      //std::cout<<"RECIBI UN PAQUETe"<<std::endl;
     }
   else
     {
@@ -355,7 +353,7 @@ main (int argc, char *argv[])
   std::endl;
   out.close ();
 
-  int nSinks = 10;
+  int nSinks = 3;
   double txp = 7.5;
 
   experiment.Run (nSinks, txp, CSVfileName);
@@ -386,7 +384,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   //double interval = 0.2; // seconds
 
 
-  int nWifis = 50;
+  int nWifis = 10;
 
   double TotalTime = 200.0;
   std::string rate ("2048bps");
@@ -463,7 +461,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   
   pos1.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   pos1.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=100.0]"));
-  pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=500.0]"));
+  pos1.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=100.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc1 = pos1.Create ()->GetObject<PositionAllocator> ();
   streamIndex1 += taPositionAlloc1->AssignStreams (streamIndex1);
@@ -486,8 +484,8 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   ObjectFactory pos2;
   pos2.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  pos2.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=101.0|Max=200.0]"));
-  pos2.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=501.0|Max=1000.0]"));
+  pos2.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=301.0|Max=400.0]"));
+  pos2.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=301.0|Max=400.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc2 = pos2.Create ()->GetObject<PositionAllocator> ();
   streamIndex2 += taPositionAlloc2->AssignStreams (streamIndex2);
@@ -509,8 +507,8 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   ObjectFactory pos3;
   pos3.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  pos3.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=201.0|Max=300.0]"));
-  pos3.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=1001.0|Max=1500.0]"));
+  pos3.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=501.0|Max=600.0]"));
+  pos3.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=501.0|Max=600.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc3 = pos3.Create ()->GetObject<PositionAllocator> ();
   streamIndex3 += taPositionAlloc3->AssignStreams (streamIndex3);
@@ -533,7 +531,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   ObjectFactory pos4;
   pos4.SetTypeId ("ns3::RandomRectanglePositionAllocator");
   pos4.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=300.0]"));
-  pos4.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1500.0]"));
+  pos4.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=300.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc4 = pos4.Create ()->GetObject<PositionAllocator> ();
   streamIndex4 += taPositionAlloc4->AssignStreams (streamIndex4);
@@ -555,13 +553,14 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   mobilityCH.Install(head_clusters);
 
   AodvHelper aodv;
+  OlsrHelper olsr;
   Ipv4StaticRoutingHelper staticRouting;
   Ipv4ListRoutingHelper list;
   InternetStackHelper internet;
 
   list.Add (staticRouting,0);
   list.Add (aodv,30);
-
+  //list.Add (olsr, 30);
   internet.SetRoutingHelper (list);
   internet.Install (Cluster1);
   internet.Install (Cluster2);
@@ -593,11 +592,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
 
   ApplicationContainer temp = onoff1.Install (Cluster3.Get (0));
-  
-
-  
-  //temp.Start (Seconds (var->GetValue (100.0,101.0)));
-  //temp.Stop (Seconds (TotalTime));
   
 
   std::stringstream ss;
