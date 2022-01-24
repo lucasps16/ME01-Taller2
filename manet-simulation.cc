@@ -98,10 +98,7 @@ class RoutingExperiment
 public:
   RoutingExperiment ();
   void Run (int nSinks, double txp, std::string CSVfileName);
-  //static void SetMACParam (ns3::NetDeviceContainer & devices,
-  //                                 int slotDistance);
   std::string CommandSetup (int argc, char **argv);
-  //uint32_t getPackets() const { return packetsReceived; }
 
 
 private:
@@ -169,7 +166,7 @@ Ptr<OpenGymDataContainer> MyGetObservation(void)
 
   std::vector<uint32_t> shape = {nodeNum,};
   Ptr<OpenGymBoxContainer<uint32_t> > box = CreateObject<OpenGymBoxContainer<uint32_t> >(shape);
-  //uint32_t nodeNum2 = NodeList::GetNNodes ();
+  
     for (uint32_t i=0; i<nodeNum; i++)
     {
       Ptr<Node> node = NodeList::GetNode(i);
@@ -185,13 +182,8 @@ Ptr<OpenGymDataContainer> MyGetObservation(void)
 }
 
 
-float 
-MyGetReward(void)
+float MyGetReward(void)
 {
-  //printf("Packet sent: %d \n", global_PacketsSent) ;
-  printf("Packet received: %d \n", global_PacketsReceived);
-  printf("Sent: %f\n",(float) global_PacketsReceived/(float) global_PacketsSent*100);
-  //printf("Simualtor time: %f\n",Simulator::Now().GetSeconds());
   return  ((float) global_PacketsReceived/(float) global_PacketsSent)*1000;
 }
 
@@ -200,8 +192,6 @@ MyGetReward(void)
 bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
 {
   NS_LOG_UNCOND ("MyExecuteActions: " << action);
-  //uint32_t nodeNum = NodeList::GetNNodes ();
-  //Iterate over nodes and check if the nodes are the ones of the second hierarchy
   int max = 300;
   int min = 0;
   float centerX= rand()%(max-min+1)+min;
@@ -209,8 +199,6 @@ bool MyExecuteActions(Ptr<OpenGymDataContainer> action)
   for (uint32_t i=0; i<33; i++)
   {
     Ptr<Node> node = NodeList::GetNode(i);
-       
-        //std::cout<<"AAHHHHHHHHHHHHHH "<<i<<std::endl;
         //Set location of the nodes of the second hierarchy
         Ptr<MobilityModel> cpMob = node->GetObject<MobilityModel>();
       
@@ -277,8 +265,7 @@ PrintReceivedPacket (Ptr<Socket> socket, Ptr<Packet> packet, Address senderAddre
   return oss.str ();
 }
 
-void
-RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
+void RoutingExperiment::ReceivePacket (Ptr<Socket> socket)
 {
   Ptr<Packet> packet;
   Address senderAddress;
@@ -336,8 +323,7 @@ RoutingExperiment::CommandSetup (int argc, char **argv)
   return m_CSVfileName;
 }
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   RoutingExperiment experiment;
   std::string CSVfileName = experiment.CommandSetup (argc,argv);
@@ -365,16 +351,12 @@ main (int argc, char *argv[])
 
 }
 
-void
-RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
+void RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 {
   Packet::EnablePrinting ();
-  //m_nSinks = nSinks;
   m_txp = txp;
   m_CSVfileName = CSVfileName;
 
-
-  // m
   //uint32_t packetSize = 1000; // bytes
   //uint32_t numPackets = 100;
   uint32_t n = 10;  // by default, 5x2
@@ -610,18 +592,9 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   ss4 << rate;
   std::string sRate = ss4.str ();
 
-  //NS_LOG_INFO ("Configure Tracing.");
-  //tr_name = tr_name + "_" + m_protocolName +"_" + nodes + "nodes_" + sNodeSpeed + "speed_" + sNodePause + "pause_" + sRate + "rate";
-
-  //AsciiTraceHelper ascii;
-  //Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ( (tr_name + ".tr").c_str());
-  //wifiPhy.EnableAsciiAll (osw);
   AsciiTraceHelper ascii;
   MobilityHelper::EnableAsciiAll (ascii.CreateFileStream (tr_name + ".mob"));
 
-  //Ptr<FlowMonitor> flowmon;
-  //FlowMonitorHelper flowmonHelper;
-  //flowmon = flowmonHelper.InstallAll ();
   double envStepTime = 0.1; //seconds, ns3gym env step time interval
   uint32_t openGymPort = 5555;
   Ptr<OpenGymInterface> openGym = CreateObject<OpenGymInterface> (openGymPort);
@@ -642,7 +615,6 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   Simulator::Stop (Seconds (TotalTime));
   Simulator::Run ();
 
-  //flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
   
 
   Simulator::Destroy ();

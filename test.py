@@ -94,7 +94,7 @@ finally:
     averages = [sum(chunk) / len(chunk) for chunk in chunks]
 
     plt.plot(averages)
-    plt.xlabel('Episode')
-    plt.ylabel('Average Reward')
+    plt.xlabel('Time')
+    plt.ylabel('% Received Packets / Sent Packets')
     plt.show()
     print("Done")
